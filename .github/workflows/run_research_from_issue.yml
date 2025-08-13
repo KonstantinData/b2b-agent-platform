@@ -1,0 +1,67 @@
+name: Run research (Issue)
+on:
+  issues:
+    types: [opened, edited, labeled]
+
+jobs:
+  run:
+    if: contains(github.event.issue.labels.*.name, 'run-research')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract inputs from issue body
+        id: parse
+        run: |
+          BODY=$(cat <<'EOF'
+          ${{ github.event.issue.body }}
+          EOF
+          )
+          NAME=$(echo "$BODY" | sed -n 's/.*Company name.*\n\n\([^#]*\).*/\1/p' | head -n1 | xargs)
+          URL=$(echo "$BODY"  | sed -n 's/.*Company website.*\n\n\([^#]*\).*/\1/p' | head -n1 | xargs)
+          INDS=$(echo "$BODY" | sed -n 's/.*Industries.*\n\n\([^#]*\).*/\1/p' | head -n1 | xargs)
+          REGION=$(echo "$BODY"| sed -n 's/.*Region.*\n\n\([^#]*\).*/\1/p' | head -n1 | xargs)
+          echo "company_name=$NAME" >> $GITHUB_OUTPUT
+          echo "company_url=$URL" >> $GITHUB_OUTPUT
+          echo "industries=$INDS" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run orchestrator
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          DEEPL_API_KEY: ${{ secrets.DEEPL_API_KEY }}
+          HUBSPOT_API_KEY: ${{ secrets.HUBSPOT_API_KEY }}
+          OPENCORPORATES_API_KEY: ${{ secrets.OPENCORPORATES_API_KEY }}
+          SERPAPI_API_KEY: ${{ secrets.SERPAPI_API_KEY }}
+        run: |
+          python run.py             --company-name "${{ steps.parse.outputs.company_name }}"             --company-url "${{ steps.parse.outputs.company_url }}"             --industries "${{ steps.parse.outputs.industries }}"             --region "${{ steps.parse.outputs.region }}"             --mode "full_auto"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: research_outputs_${{ github.event.issue.number }}
+          path: |
+            data/outputs/*.csv
+            data/outputs/*.json
+            data/outputs/*.pdf
+
+      - name: Comment results to Issue
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            ✅ Research run completed.
+            Artifacts: See **Actions → this run → Artifacts** (CSV/JSON/PDF).

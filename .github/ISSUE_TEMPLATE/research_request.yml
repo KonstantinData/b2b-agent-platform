@@ -1,0 +1,38 @@
+name: Research request
+description: Start an automated company research run
+title: "Research: <Company Name>"
+labels: ["run-research"]
+body:
+  - type: input
+    id: company_name
+    attributes:
+      label: Company name
+      placeholder: e.g., ACME GmbH
+    validations:
+      required: true
+  - type: input
+    id: company_url
+    attributes:
+      label: Company website
+      placeholder: https://example.com
+    validations:
+      required: true
+  - type: textarea
+    id: industries
+    attributes:
+      label: Industries
+      description: Comma separated (Electrical engineering, Medical technology, Mechanical engineering)
+      placeholder: Electrical engineering, Medical technology, Mechanical engineering
+    validations:
+      required: true
+  - type: dropdown
+    id: region
+    attributes:
+      label: Region
+      options:
+        - DACH
+        - DE
+        - AT
+        - CH
+    validations:
+      required: true

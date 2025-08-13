@@ -1,0 +1,9 @@
+requests
+pydantic
+pandas
+python-dateutil
+pyyaml
+reportlab
+jinja2
+hubspot-api-client
+tqdm
